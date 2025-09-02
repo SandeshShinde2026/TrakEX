@@ -1,6 +1,6 @@
-# Mujjar Funds
+# TrakEX
 
-A Flutter-based expense tracker app with Firebase integration.
+A Flutter-based smart expense tracker app with friends integration and Firebase backend.
 
 ## Features
 
@@ -12,7 +12,7 @@ A Flutter-based expense tracker app with Firebase integration.
 
 ## Download
 
-You can download the latest APK from the [Releases](https://github.com/SandeshShinde2026/MujjarFunds/releases) section.
+You can download the latest APK from the [Releases](https://github.com/SandeshShinde2026/TrakEX/releases) section.
 
 ## Screenshots
 
