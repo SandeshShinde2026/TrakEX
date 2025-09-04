@@ -85,6 +85,9 @@ dependencies:
   animations: ^2.0.11
   flutter_animate: ^4.5.0
 
+  # CSV parsing for AI features
+  csv: ^6.0.0
+
   # UPI Payment is handled through url_launcher
 
 dev_dependencies:

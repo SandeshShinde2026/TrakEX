@@ -15,6 +15,7 @@ import '../../widgets/quick_action_button.dart';
 import '../../widgets/recent_transaction_card.dart';
 import '../../widgets/simple_calculator.dart';
 import '../../widgets/banner_ad_widget.dart';
+import '../../widgets/expense_categorization_demo.dart'; // Add this import
 
 
 import '../../widgets/quick_action_drawer.dart';
@@ -776,6 +777,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const SnackBar(
         content: Text('Receipt scanning feature coming soon!'),
         duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Navigate to AI categorization demo
+  void _navigateToAIDemo() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ExpenseCategorializationDemo(),
       ),
     );
   }

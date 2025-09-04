@@ -1,4 +1,4 @@
- import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,6 +19,10 @@ import '../../utils/validators.dart';
 import '../../utils/auth_helper.dart';
 import '../../widgets/currency_selector.dart';
 import '../../providers/currency_provider.dart';
+import '../../services/expense_categorization_service.dart';
+import '../../widgets/intelligent_description_field.dart'; // Add this import
+import '../../services/smart_budget_alerts_service.dart'; // Add this import
+import '../../widgets/smart_budget_alert_dialog.dart'; // Add this import
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -58,6 +62,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   // Custom amounts for each friend
   final Map<String, double> _customAmounts = {};
+
+  // AI Categorization
+  final ExpenseCategorizationService _categorizationService = ExpenseCategorizationService();
+  bool _isAILoading = false;
+  String? _aiSuggestedCategory;
+  double? _aiConfidence;
 
   @override
   void initState() {
@@ -370,7 +380,113 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
+  // AI Categorization method
+  Future<void> _getAISuggestion() async {
+    final description = _descriptionController.text.trim();
+    if (description.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a description first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
+    setState(() {
+      _isAILoading = true;
+      _aiSuggestedCategory = null;
+      _aiConfidence = null;
+    });
+
+    try {
+      final category = await _categorizationService.predictCategoryWithFallback(
+        description,
+        availableCategories: AppConstants.expenseCategories.map((cat) => cat['name'] as String).toList(),
+      );
+      
+      // Try to get detailed prediction for confidence
+      try {
+        final prediction = await _categorizationService.predictCategory(description);
+        setState(() {
+          _aiSuggestedCategory = category;
+          _aiConfidence = prediction?.confidence; // Use safe navigation
+          _isAILoading = false;
+        });
+      } catch (e) {
+        // Fallback if detailed prediction fails
+        setState(() {
+          _aiSuggestedCategory = category;
+          _aiConfidence = null;
+          _isAILoading = false;
+        });
+      }
+      
+      // Show suggestion to user
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.psychology, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text('AI Suggestion'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Description: "$description"'),
+                const SizedBox(height: 12),
+                Text(
+                  'Suggested Category: $category',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                if (_aiConfidence != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Confidence: ${(_aiConfidence! * 100).toStringAsFixed(1)}%',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Dismiss'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedCategory = category;
+                    _isCustomCategory = false;
+                  });
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Use Suggestion'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isAILoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('AI suggestion failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _saveExpense() async {
     debugPrint('Save expense button pressed');
@@ -430,6 +546,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               backgroundColor: Colors.red,
             ),
           );
+          setState(() {
+            _isSubmitting = false;
+          });
           return;
         }
       } else {
@@ -442,9 +561,41 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               backgroundColor: Colors.red,
             ),
           );
+          setState(() {
+            _isSubmitting = false;
+          });
           return;
         }
         category = _selectedCategory!;
+      }
+
+      // Smart Budget Alert Check - NEW INTEGRATION
+      try {
+        final alertsService = SmartBudgetAlertsService();
+        final alert = await alertsService.checkSmartBudgetAlert(
+          userId, 
+          category, 
+          amount,
+        );
+
+        if (alert != null && mounted) {
+          // Show smart budget alert dialog
+          final proceed = await SmartBudgetAlertDialog.show(
+            context, 
+            alert,
+          );
+          
+          // If user chose not to proceed, reset submission flag and return
+          if (proceed != true) {
+            setState(() {
+              _isSubmitting = false;
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('Smart budget alert check failed: $e');
+        // Continue with expense creation even if budget alert fails
       }
 
       debugPrint('Creating expense for user: $userId with category: $category');
@@ -502,9 +653,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         _selectedImages.isNotEmpty ? _selectedImages : null,
       );
 
-      // Check for budget alerts separately if still mounted
+      // Check for traditional budget alerts separately if still mounted
       if (success && mounted) {
-        // Check if there's a budget alert for this category
+        // Check if there's a budget alert for this category (legacy support)
         final budgetProvider = Provider.of<BudgetProvider>(context, listen: false);
         budgetProvider.showBudgetAlertDialog(context, expense.category);
       }
@@ -775,15 +926,106 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ],
                     const SizedBox(height: AppTheme.mediumSpacing),
 
-                    // Description Field
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        prefixIcon: Icon(Icons.description),
-                      ),
-                      validator: Validators.validateDescription,
+                    // Description Field - Replace with Intelligent Description Field
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        if (authProvider.userModel != null) {
+                          return IntelligentDescriptionField(
+                            controller: _descriptionController,
+                            userId: authProvider.userModel!.id,
+                            onDescriptionSelected: (description) {
+                              // Optional: Auto-suggest category based on description
+                              if (description.isNotEmpty) {
+                                _getAISuggestion();
+                              }
+                            },
+                          );
+                        } else {
+                          // Fallback to regular text field if user not authenticated
+                          return TextFormField(
+                            controller: _descriptionController,
+                            decoration: const InputDecoration(
+                              labelText: 'Description',
+                              prefixIcon: Icon(Icons.description),
+                            ),
+                            validator: Validators.validateDescription,
+                          );
+                        }
+                      },
                     ),
+                    
+                    // AI Category Suggestion Button
+                    const SizedBox(height: AppTheme.smallSpacing),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isAILoading ? null : _getAISuggestion,
+                        icon: _isAILoading 
+                            ? const SizedBox(
+                                width: 16, 
+                                height: 16, 
+                                child: CircularProgressIndicator(strokeWidth: 2)
+                              )
+                            : const Icon(Icons.psychology),
+                        label: Text(_isAILoading ? 'Getting AI Suggestion...' : 'Get AI Category Suggestion'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    
+                    // Show AI suggestion result if available
+                    if (_aiSuggestedCategory != null) ...[
+                      const SizedBox(height: AppTheme.smallSpacing),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.purple.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.psychology, color: Colors.purple.shade700, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'AI Suggested: $_aiSuggestedCategory',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.purple.shade700,
+                                    ),
+                                  ),
+                                  if (_aiConfidence != null)
+                                    Text(
+                                      'Confidence: ${(_aiConfidence! * 100).toStringAsFixed(1)}%',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.purple.shade600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedCategory = _aiSuggestedCategory;
+                                  _isCustomCategory = false;
+                                });
+                              },
+                              child: const Text('Use This'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: AppTheme.mediumSpacing),
 
                     // Date Picker
@@ -989,7 +1231,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                           secondary: Container(
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
-                                              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                                              color: Theme.of(context).primaryColor.withAlpha(30),
                                               borderRadius: BorderRadius.circular(20),
                                             ),
                                             child: Icon(
