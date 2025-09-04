@@ -43,3 +43,143 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ===== SECURITY & CONFIDENTIAL FILES =====
+
+# Firebase Configuration Files (CRITICAL - Contains API Keys)
+firebase_options.dart
+google-services.json
+GoogleService-Info.plist
+firebase.json
+.firebaserc
+
+# Android Security Files
+android/key.properties
+android/app/google-services.json
+android/local.properties
+android/gradle.properties
+*.keystore
+*.jks
+key/
+keystore/
+
+# iOS Security Files
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+ios/Runner/Info.plist
+
+# Environment Variables & API Keys
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+*.env
+api_keys.dart
+secrets.dart
+config.dart
+credentials.json
+
+# Backend Server Credentials
+backend_server.py
+requirements.txt
+*.pem
+*.p12
+*.cer
+*.crt
+*.key
+
+# Database & Authentication
+database.json
+auth_config.json
+service_account.json
+private_key.json
+
+# AI/ML Model Files (if they contain sensitive data)
+models/
+*.joblib
+*.pkl
+*.h5
+*.pb
+train_model.py
+
+# User Data & Logs
+user_data/
+logs/
+*.log
+debug.log
+error.log
+
+# Release Files & APKs (may contain sensitive build info)
+releases/
+*.apk
+*.ipa
+*.aab
+
+# Cache & Temporary Files
+cache/
+temp/
+tmp/
+__pycache__/
+*.cache
+
+# Platform Specific Sensitive Files
+# Android
+android/app/src/main/res/values/strings.xml
+android/app/src/debug/
+android/app/src/profile/
+android/app/src/release/
+
+# iOS
+ios/Runner/Assets.xcassets/
+ios/Runner/Base.lproj/
+ios/Pods/
+
+# FCM & Push Notification Keys
+fcm_server_key.txt
+push_notification_keys/
+notification_config.json
+
+# Payment Gateway Keys
+payment_keys.dart
+stripe_keys.dart
+razorpay_keys.dart
+paypal_config.json
+
+# Social Media API Keys
+facebook_config.json
+google_oauth.json
+twitter_keys.dart
+
+# Analytics & Tracking IDs
+analytics_config.dart
+tracking_ids.json
+admob_config.dart
+
+# Development & Testing
+test_data/
+mock_data/
+debug_config.dart
+test_credentials.json
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*~
+
+# IDE & Editor Specific
+.vscode/settings.json
+.vscode/launch.json
+*.sublime-project
+*.sublime-workspace
+
+# OS Generated Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Trashes
+.Spotlight-V100
+.TemporaryItems

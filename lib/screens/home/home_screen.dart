@@ -11,6 +11,7 @@ import '../../utils/responsive_helper.dart';
 import '../analytics/analytics_screen.dart';
 import '../expenses/add_expense_screen.dart';
 import '../expenses/enhanced_expenses_screen.dart';
+import '../insights/spending_insights_screen.dart'; // Add this import
 import 'dashboard_screen.dart';
 import 'budget_screen.dart';
 import 'friends_screen.dart';
@@ -76,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const DashboardScreen(),
     EnhancedExpensesScreen(), // Using the enhanced expenses screen with date grouping
     const BudgetScreen(),
+    const SpendingInsightsScreen(), // Add AI Insights screen
     const AnalyticsScreen(), // Analytics screen
     const FriendsScreen(),
   ];
@@ -219,7 +221,11 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Budget',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.insights),
+            icon: Icon(Icons.psychology),
+            label: 'AI Insights',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
             label: 'Analytics',
           ),
           BottomNavigationBarItem(
